@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">OpenDay</string>
+
+    <string name="mobica">MOBICA</string>
+    <string name="action_settings">Settings</string>
+    <string name="mobica_workshop">Open Day</string>
+    <string name="android_wear">Android Wear</string>
+    <string name="choose_color">Choose color</string>
+</resources>
