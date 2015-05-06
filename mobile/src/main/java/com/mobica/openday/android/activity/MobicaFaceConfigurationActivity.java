@@ -34,18 +34,20 @@ public class MobicaFaceConfigurationActivity extends Activity implements RadioGr
 	private static final int COLOR_BACKGROUND = 0;
 	private static final int COLOR_TIME_HANDS = 1;
 	private static final int COLOR_LABEL = 2;
+	private static final int COLOR_BACKGROUND_AMBIENT = 3;
 
 	private GoogleApiClient googleApiClient;
 
 	private FaceData faceData;
 
-	private View background, timeHands, label;
+	private View background, backgroundAmbient, timeHands, label;
 
 	@Override protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_face_configuration);
 
 		background = findViewById(R.id.color_background);
+		backgroundAmbient = findViewById(R.id.color_ambient_background);
 		timeHands = findViewById(R.id.color_time_hands);
 		label = findViewById(R.id.color_label);
 
@@ -77,6 +79,7 @@ public class MobicaFaceConfigurationActivity extends Activity implements RadioGr
 		faceData = FaceData.createAnalogData();
 
 		handleColorClicks(COLOR_BACKGROUND, faceData.getBackgroundColor());
+		handleColorClicks(COLOR_BACKGROUND_AMBIENT, faceData.getBackgroundAmbientColor());
 		handleColorClicks(COLOR_LABEL, faceData.getLabelColor());
 		handleColorClicks(COLOR_TIME_HANDS, faceData.getTimeHandsColor());
 	}
@@ -93,6 +96,10 @@ public class MobicaFaceConfigurationActivity extends Activity implements RadioGr
 
 	public void onBackgroundColorClick(View view) {
 		showColorPicker(COLOR_BACKGROUND);
+	}
+
+	public void onAmbientBackgroundColorClick(View view) {
+		showColorPicker(COLOR_BACKGROUND_AMBIENT);
 	}
 
 	public void onTimeHandsColorClick(View view) {
@@ -141,6 +148,10 @@ public class MobicaFaceConfigurationActivity extends Activity implements RadioGr
 			case COLOR_BACKGROUND:
 				faceData.setBackgroundColor(clickedColor);
 				view = background;
+				break;
+			case COLOR_BACKGROUND_AMBIENT:
+				faceData.setBackgroundAmbientColor(clickedColor);
+				view = backgroundAmbient;
 				break;
 			case COLOR_TIME_HANDS:
 				faceData.setTimeHandsColor(clickedColor);

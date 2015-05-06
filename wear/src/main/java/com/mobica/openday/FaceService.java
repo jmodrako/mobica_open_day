@@ -63,25 +63,31 @@ public class FaceService extends CanvasWatchFaceService {
 		Paint labelPaint;
 		Time mTime;
 
-		FaceData faceData;
+		FaceData.ClockType clockType = FaceData.ClockType.ANALOG;
+		int backgroundColor;
+		int backgroundAmbientColor;
+		int labelColor;
+		int handsColor;
 
-		boolean mAmbient;
-		boolean mLowBitAmbient;
+		boolean isAmbient;
+		boolean isLowBitAmbient;
 		private float[] labelTextSize;
 
 		/** Handler to update the time once a second in interactive mode. */
-		final Handler mUpdateTimeHandler = new Handler() {
+		final Handler updateTimeHandler = new Handler() {
 			@Override
 			public void handleMessage(Message message) {
 				switch (message.what) {
 					case MSG_UPDATE_TIME:
 						invalidate();
+
 						if (shouldTimerBeRunning()) {
 							long timeMs = System.currentTimeMillis();
 							long delayMs = INTERACTIVE_UPDATE_RATE_MS
 									- (timeMs % INTERACTIVE_UPDATE_RATE_MS);
-							mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
+							updateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
 						}
+
 						break;
 				}
 			}
@@ -101,17 +107,7 @@ public class FaceService extends CanvasWatchFaceService {
 					.setShowSystemUiTime(false)
 					.build());
 
-			Resources resources = FaceService.this.getResources();
-
-			handPaint = new Paint();
-			handPaint.setStrokeWidth(resources.getDimension(R.dimen.analog_hand_stroke));
-			handPaint.setAntiAlias(true);
-			handPaint.setStrokeCap(Paint.Cap.ROUND);
-
-			labelPaint = new Paint();
-			labelPaint.setAntiAlias(true);
-			labelPaint.setSubpixelText(true);
-			labelPaint.setTextSize(55);
+			preparePaints();
 
 			labelTextSize = measureText(labelPaint, MOBICA_LABEL);
 
@@ -119,37 +115,14 @@ public class FaceService extends CanvasWatchFaceService {
 		}
 
 		@Override
-		public void onDestroy() {
-			Logger.l(TAG + ", onDestroy");
-			mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME);
-			super.onDestroy();
-		}
-
-		@Override
-		public void onPropertiesChanged(Bundle properties) {
-			Logger.l(TAG + ", onPropertiesChanged");
-
-			super.onPropertiesChanged(properties);
-			mLowBitAmbient = properties.getBoolean(PROPERTY_LOW_BIT_AMBIENT, false);
-		}
-
-		@Override
-		public void onTimeTick() {
-			Logger.l(TAG + ", onTimeTick");
-
-			super.onTimeTick();
-			invalidate();
-		}
-
-		@Override
 		public void onAmbientModeChanged(boolean inAmbientMode) {
 			Logger.l(TAG + ", onAmbientModeChanged");
 
 			super.onAmbientModeChanged(inAmbientMode);
-			if (mAmbient != inAmbientMode) {
-				mAmbient = inAmbientMode;
+			if (isAmbient != inAmbientMode) {
+				isAmbient = inAmbientMode;
 
-				if (mLowBitAmbient) {
+				if (isLowBitAmbient) {
 					handPaint.setAntiAlias(!inAmbientMode);
 				}
 
@@ -163,50 +136,24 @@ public class FaceService extends CanvasWatchFaceService {
 
 		@Override
 		public void onDraw(Canvas canvas, Rect bounds) {
-			if (faceData == null) {
-				faceData = FaceData.createAnalogData();
-			}
+			Logger.l(TAG + ", onDraw");
 
-			handPaint.setColor(faceData.getTimeHandsColor());
-			labelPaint.setColor(faceData.getLabelColor());
+			handPaint.setColor(handsColor);
+			labelPaint.setColor(labelColor);
 
 			mTime.setToNow();
 
-			// Draw background.
-			canvas.drawColor(faceData.getBackgroundColor());
+			// Draw background in proper mode.
+			canvas.drawColor(isAmbient ? backgroundAmbientColor : backgroundColor);
 
-			// Find the center. Ignore the window insets so that, on round watches with a
-			// "chin", the watch face is centered on the entire screen, not just the usable
-			// portion.
-			float centerX = bounds.width() / 2f;
-			float centerY = bounds.height() / 2f;
-
-			// Draw MOBICA label.
-			canvas.drawText(MOBICA_LABEL, centerX - labelTextSize[0] / 2, centerY + labelTextSize[1] / 2, labelPaint);
-
-			// Draw time hands.
-			float secRot = mTime.second / 30f * (float) Math.PI;
-			int minutes = mTime.minute;
-			float minRot = minutes / 30f * (float) Math.PI;
-			float hrRot = ((mTime.hour + (minutes / 60f)) / 6f) * (float) Math.PI;
-
-			float secLength = centerX - 20;
-			float minLength = centerX - 40;
-			float hrLength = centerX - 80;
-
-			if (!mAmbient) {
-				float secX = (float) Math.sin(secRot) * secLength;
-				float secY = (float) -Math.cos(secRot) * secLength;
-				canvas.drawLine(centerX, centerY, centerX + secX, centerY + secY, handPaint);
+			switch (clockType) {
+				case DIGITAL:
+					drawDigitalFace(canvas, bounds);
+					break;
+				case ANALOG:
+					drawAnalogFace(canvas, bounds);
+					break;
 			}
-
-			float minX = (float) Math.sin(minRot) * minLength;
-			float minY = (float) -Math.cos(minRot) * minLength;
-			canvas.drawLine(centerX, centerY, centerX + minX, centerY + minY, handPaint);
-
-			float hrX = (float) Math.sin(hrRot) * hrLength;
-			float hrY = (float) -Math.cos(hrRot) * hrLength;
-			canvas.drawLine(centerX, centerY, centerX + hrX, centerY + hrY, handPaint);
 		}
 
 		@Override
@@ -227,53 +174,27 @@ public class FaceService extends CanvasWatchFaceService {
 			updateTimer();
 		}
 
-		/**
-		 * Starts the {@link #mUpdateTimeHandler} timer if it should be running and isn't currently
-		 * or stops it if it shouldn't be running but currently is.
-		 */
-		private void updateTimer() {
-			mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME);
-
-			if (shouldTimerBeRunning()) {
-				mUpdateTimeHandler.sendEmptyMessage(MSG_UPDATE_TIME);
-			}
+		@Override
+		public void onDestroy() {
+			Logger.l(TAG + ", onDestroy");
+			updateTimeHandler.removeMessages(MSG_UPDATE_TIME);
+			super.onDestroy();
 		}
 
-		/**
-		 * Returns whether the {@link #mUpdateTimeHandler} timer should be running. The timer should
-		 * only run when we're visible and in interactive mode.
-		 */
-		private boolean shouldTimerBeRunning() {
-			return isVisible() && !isInAmbientMode();
+		@Override
+		public void onPropertiesChanged(Bundle properties) {
+			Logger.l(TAG + ", onPropertiesChanged");
+
+			super.onPropertiesChanged(properties);
+			isLowBitAmbient = properties.getBoolean(PROPERTY_LOW_BIT_AMBIENT, false);
 		}
 
-		private void updateConfigDataItemAndUiOnStartup() {
-			Logger.l(TAG + ", updateConfigDataItemAndUiOnStartup");
+		@Override
+		public void onTimeTick() {
+			Logger.l(TAG + ", onTimeTick");
 
-			DigitalWatchFaceUtil.fetchConfigDataMap(googleApiClient,
-					new DigitalWatchFaceUtil.FetchConfigDataMapCallback() {
-						@Override
-						public void onConfigDataMapFetched(FaceData faceData) {
-							updateUiForConfig(faceData);
-						}
-					}
-			);
-		}
-
-		private void updateUiForConfig(FaceData faceData) {
-			Logger.l(TAG + ", updateUiForConfig");
-			this.faceData = faceData;
+			super.onTimeTick();
 			invalidate();
-		}
-
-		private final Rect sTextBoundsHelper = new Rect();
-
-		private float[] measureText(Paint paint, String text) {
-			paint.getTextBounds(text, 0, text.length(), sTextBoundsHelper);
-			float textWidth = paint.measureText(text);
-			int textHeight = sTextBoundsHelper.height();
-
-			return new float[]{textWidth, textHeight};
 		}
 
 		@Override public void onConnected(Bundle bundle) {
@@ -304,6 +225,107 @@ public class FaceService extends CanvasWatchFaceService {
 			} finally {
 				dataEvents.close();
 			}
+		}
+
+		private void drawAnalogFace(Canvas canvas, Rect bounds) {
+			// Find the center. Ignore the window insets so that, on round watches with a
+			// "chin", the watch face is centered on the entire screen, not just the usable
+			// portion.
+			float centerX = bounds.width() / 2f;
+			float centerY = bounds.height() / 2f;
+
+			// Draw MOBICA label.
+			canvas.drawText(MOBICA_LABEL, centerX - labelTextSize[0] / 2, centerY + labelTextSize[1] / 2, labelPaint);
+
+			// Draw time hands.
+			float secRot = mTime.second / 30f * (float) Math.PI;
+			int minutes = mTime.minute;
+			float minRot = minutes / 30f * (float) Math.PI;
+			float hrRot = ((mTime.hour + (minutes / 60f)) / 6f) * (float) Math.PI;
+
+			float secLength = centerX - 20;
+			float minLength = centerX - 40;
+			float hrLength = centerX - 80;
+
+			if (!isAmbient) {
+				float secX = (float) Math.sin(secRot) * secLength;
+				float secY = (float) -Math.cos(secRot) * secLength;
+				canvas.drawLine(centerX, centerY, centerX + secX, centerY + secY, handPaint);
+			}
+
+			float minX = (float) Math.sin(minRot) * minLength;
+			float minY = (float) -Math.cos(minRot) * minLength;
+			canvas.drawLine(centerX, centerY, centerX + minX, centerY + minY, handPaint);
+
+			float hrX = (float) Math.sin(hrRot) * hrLength;
+			float hrY = (float) -Math.cos(hrRot) * hrLength;
+			canvas.drawLine(centerX, centerY, centerX + hrX, centerY + hrY, handPaint);
+		}
+
+		private void drawDigitalFace(Canvas canvas, Rect bounds) {
+			// TODO
+		}
+
+		private void updateTimer() {
+			updateTimeHandler.removeMessages(MSG_UPDATE_TIME);
+
+			if (shouldTimerBeRunning()) {
+				updateTimeHandler.sendEmptyMessage(MSG_UPDATE_TIME);
+			}
+		}
+
+		private boolean shouldTimerBeRunning() {
+			return isVisible() && !isInAmbientMode();
+		}
+
+		private void updateConfigDataItemAndUiOnStartup() {
+			Logger.l(TAG + ", updateConfigDataItemAndUiOnStartup");
+
+			DigitalWatchFaceUtil.fetchConfigDataMap(googleApiClient,
+					new DigitalWatchFaceUtil.FetchConfigDataMapCallback() {
+						@Override
+						public void onConfigDataMapFetched(FaceData faceData) {
+							updateUiForConfig(faceData);
+						}
+					}
+			);
+		}
+
+		private void updateUiForConfig(FaceData faceData) {
+			Logger.l(TAG + ", updateUiForConfig: " + faceData);
+
+			clockType = faceData.getClockType();
+
+			backgroundColor = faceData.getBackgroundColor();
+			backgroundAmbientColor = faceData.getBackgroundAmbientColor();
+			labelColor = faceData.getLabelColor();
+			handsColor = faceData.getTimeHandsColor();
+
+			invalidate();
+		}
+
+		private final Rect sTextBoundsHelper = new Rect();
+
+		private float[] measureText(Paint paint, String text) {
+			paint.getTextBounds(text, 0, text.length(), sTextBoundsHelper);
+			float textWidth = paint.measureText(text);
+			int textHeight = sTextBoundsHelper.height();
+
+			return new float[]{textWidth, textHeight};
+		}
+
+		private void preparePaints() {
+			Resources resources = FaceService.this.getResources();
+
+			handPaint = new Paint();
+			handPaint.setStrokeWidth(resources.getDimension(R.dimen.analog_hand_stroke));
+			handPaint.setAntiAlias(true);
+			handPaint.setStrokeCap(Paint.Cap.ROUND);
+
+			labelPaint = new Paint();
+			labelPaint.setAntiAlias(true);
+			labelPaint.setSubpixelText(true);
+			labelPaint.setTextSize(55);
 		}
 
 		@Override public void onConnectionSuspended(int i) {

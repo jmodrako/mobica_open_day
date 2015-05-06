@@ -100,13 +100,25 @@ public abstract class DigitalWatchFaceUtil {
 
 		@Override
 		public void onResult(DataApi.DataItemResult dataItemResult) {
+			Logger.l("DataItemResultCallback.onResult");
+
 			if (dataItemResult.getStatus().isSuccess()) {
+				Logger.l("DataItemResultCallback.onResult.success");
+
 				if (dataItemResult.getDataItem() != null) {
+					Logger.l("DataItemResultCallback.onResult.success.data_available");
+
 					DataItem configDataItem = dataItemResult.getDataItem();
 					DataMapItem dataMapItem = DataMapItem.fromDataItem(configDataItem);
 					DataMap config = dataMapItem.getDataMap();
-					mCallback.onConfigDataMapFetched(FaceData.fromDataMap(config));
+					FaceData faceData = FaceData.fromDataMap(config);
+
+					Logger.l("DataItemResultCallback.onResult.success.data_available.face_data: " + faceData);
+
+					mCallback.onConfigDataMapFetched(faceData);
 				} else {
+					Logger.l("DataItemResultCallback.onResult.success.default_face");
+
 					mCallback.onConfigDataMapFetched(FaceData.createAnalogData());
 				}
 			}
