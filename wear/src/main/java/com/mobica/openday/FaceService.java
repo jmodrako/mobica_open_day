@@ -115,6 +115,7 @@ public class FaceService extends CanvasWatchFaceService {
 			Logger.l(TAG + ", onAmbientModeChanged");
 
 			super.onAmbientModeChanged(inAmbientMode);
+
 			if (isAmbient != inAmbientMode) {
 				isAmbient = inAmbientMode;
 
@@ -231,7 +232,8 @@ public class FaceService extends CanvasWatchFaceService {
 			float centerY = bounds.height() / 2f;
 
 			// Draw MOBICA label.
-			canvas.drawText(MOBICA_LABEL, centerX - labelTextSize[0] / 2, centerY + labelTextSize[1] / 2, labelPaint);
+			canvas.drawText(MOBICA_LABEL, centerX - labelTextSize[0] / 2,
+					centerY + labelTextSize[1] / 2, labelPaint);
 
 			// Draw time hands.
 			float secRot = mTime.second / 30f * (float) Math.PI;

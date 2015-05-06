@@ -24,8 +24,8 @@ import com.mobica.openday.R;
  *
  * @author jacek.modrakowski@mobica.com
  */
-public class MobicaFaceConfigurationActivity extends Activity implements RadioGroup.OnCheckedChangeListener,
-		ResultCallback<DataApi.DataItemResult> {
+public class MobicaFaceConfigurationActivity extends Activity
+		implements RadioGroup.OnCheckedChangeListener, ResultCallback<DataApi.DataItemResult> {
 
 	private static final String TAG = MobicaFaceConfigurationActivity.class.getSimpleName();
 
