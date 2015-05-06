@@ -33,7 +33,7 @@ public class FaceData {
 		FaceData result = new FaceData();
 
 		result.setClockType(ClockType.ANALOG);
-		result.setBackgroundColor(Color.GRAY);
+		result.setBackgroundColor(Color.parseColor("#518acd"));
 		result.setLabelColor(Color.WHITE);
 		result.setTimeHandsColor(Color.RED);
 		result.setBackgroundAmbientColor(Color.BLACK);
@@ -44,7 +44,7 @@ public class FaceData {
 	public static FaceData fromDataMap(DataMap dataMap) {
 		FaceData result = new FaceData();
 
-		result.setClockType(ClockType.valueOf(dataMap.getString(KEY_CLOCK_TYPE)));
+		result.setClockType(ClockType.values()[dataMap.getInt(KEY_CLOCK_TYPE)]);
 		result.setBackgroundColor(dataMap.getInt(KEY_COLOR_BCKG));
 		result.setLabelColor(dataMap.getInt(KEY_COLOR_LABEL));
 		result.setTimeHandsColor(dataMap.getInt(KEY_COLOR_TIME_HDS));
